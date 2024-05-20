@@ -10,6 +10,7 @@ DEFAULTS = {
     'hide_empty_workspaces': False,
     'animation': False,
     'container_padding': {'top': 0, 'left': 0, 'bottom': 0, 'right': 0},
+    'hide_private_workspaces': [],
 }
 
 VALIDATION_SCHEMA = {
@@ -56,6 +57,14 @@ VALIDATION_SCHEMA = {
     'container_padding': {
         'type': 'dict',
         'default': DEFAULTS['container_padding'],
+        'required': False
+    },
+    'hide_private_workspaces': {
+        'type': 'list',
+        'schema': {
+            'type': 'integer'
+        },
+        'default': DEFAULTS['hide_private_workspaces'],
         'required': False
     }
 }

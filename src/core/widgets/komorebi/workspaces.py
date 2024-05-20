@@ -17,10 +17,11 @@ except ImportError:
     KomorebiEventListener = None
     logging.warning("Failed to load Komorebi Event Listener")
 
-WorkspaceStatus = Literal["EMPTY", "POPULATED", "ACTIVE"]
+WorkspaceStatus = Literal["EMPTY", "POPULATED", "ACTIVE", "PRIVATE"]
 WORKSPACE_STATUS_EMPTY: WorkspaceStatus = "EMPTY"
 WORKSPACE_STATUS_POPULATED: WorkspaceStatus = "POPULATED"
 WORKSPACE_STATUS_ACTIVE: WorkspaceStatus = "ACTIVE"
+WORKSPACE_STATUS_PRIVATE: WorkspaceStatus = "PRIVATE"
 
 class WorkspaceButton(QPushButton):
 
@@ -121,7 +122,8 @@ class WorkspaceWidget(BaseWidget):
             label_zero_index: bool,
             hide_empty_workspaces: bool,
             container_padding: dict,
-            animation: bool
+            animation: bool,
+            hide_private_workspaces: list
     ):
         super().__init__(class_name="komorebi-workspaces")
         self._event_service = EventService()
@@ -141,6 +143,8 @@ class WorkspaceWidget(BaseWidget):
         self._curr_workspace_index = None
         self._workspace_buttons: list[WorkspaceButton] = []
         self._hide_empty_workspaces = hide_empty_workspaces
+        self._hide_private_workspaces = hide_private_workspaces
+
         self._workspace_focus_events = [
             KomorebiEvent.CycleFocusWorkspace.value,
             KomorebiEvent.CycleFocusMonitor.value,
@@ -296,6 +300,8 @@ class WorkspaceWidget(BaseWidget):
     def _get_workspace_new_status(self, workspace) -> WorkspaceStatus:
         if self._curr_workspace_index == workspace['index']:
             return WORKSPACE_STATUS_ACTIVE
+        elif workspace['index'] in self._hide_private_workspaces:
+            return WORKSPACE_STATUS_PRIVATE
         elif self._komorebic.get_num_windows(workspace) > 0:
             return WORKSPACE_STATUS_POPULATED
         else:
@@ -305,7 +311,9 @@ class WorkspaceWidget(BaseWidget):
         workspace_index = workspace_btn.workspace_index
         workspace = self._komorebic.get_workspace_by_index(self._komorebi_screen, workspace_index)
         workspace_status = self._get_workspace_new_status(workspace)
-        if self._hide_empty_workspaces and workspace_status == WORKSPACE_STATUS_EMPTY:
+        if ((self._hide_empty_workspaces and
+           workspace_status == WORKSPACE_STATUS_EMPTY) or
+           workspace_status == WORKSPACE_STATUS_PRIVATE):
             workspace_btn.hide()
         else:
             workspace_btn.show()
