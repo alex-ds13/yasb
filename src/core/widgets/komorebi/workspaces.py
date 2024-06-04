@@ -84,7 +84,9 @@ class WorkspaceWidget(BaseWidget):
             KomorebiEvent.CycleFocusMonitor.value,
             KomorebiEvent.FocusMonitorWorkspaceNumber.value,
             KomorebiEvent.FocusMonitorNumber.value,
-            KomorebiEvent.FocusWorkspaceNumber.value
+            KomorebiEvent.FocusWorkspaceNumber.value,
+            KomorebiEvent.FocusWorkspaceNumbers.value,
+            KomorebiEvent.FocusChange.value
         ]
 
         self._update_buttons_event_watchlist = [
@@ -165,7 +167,7 @@ class WorkspaceWidget(BaseWidget):
 
                 self._add_or_update_buttons()
 
-            elif event['type'] in self._workspace_focus_events and self._has_active_workspace_index_changed():
+            elif event['type'] in self._workspace_focus_events or self._has_active_workspace_index_changed():
                 try:
                     prev_workspace_button = self._workspace_buttons[self._prev_workspace_index]
                     self._update_button(prev_workspace_button)
