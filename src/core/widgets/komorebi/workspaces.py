@@ -23,6 +23,29 @@ WORKSPACE_STATUS_POPULATED: WorkspaceStatus = "POPULATED"
 WORKSPACE_STATUS_ACTIVE: WorkspaceStatus = "ACTIVE"
 WORKSPACE_STATUS_PRIVATE: WorkspaceStatus = "PRIVATE"
 
+StackWindowStatus = Literal["FOCUSED", "UNFOCUSED"]
+STACK_WINDOW_STATUS_FOCUSED: StackWindowStatus = "FOCUSED"
+STACK_WINDOW_STATUS_UNFOCUSED: StackWindowStatus = "UNFOCUSED"
+
+
+class StackedWindowButton(QPushButton):
+
+    def __init__(self, stack_window_index: int, label: str = None):
+        super().__init__()
+        self.komorebic = KomorebiClient()
+        self.stack_window_index = stack_window_index
+        self.status = STACK_WINDOW_STATUS_UNFOCUSED
+        self.setProperty("class", "sw-btn")
+        self.setText(label if label else str(stack_window_index + 1))
+        # self.clicked.connect(self.focus_stack_window)
+        self.hide()
+
+    def update_and_redraw(self, status: StackWindowStatus):
+        self.status = status
+        self.setProperty("class", f"sw-btn {status.lower()}")
+        self.setStyleSheet('')
+
+
 class WorkspaceButton(QPushButton):
 
     def __init__(self, workspace_index: int, parent_widget: 'WorkspaceWidget', label: str = None, active_label: str = None, populated_label: str = None, animation: bool = False):
@@ -145,6 +168,15 @@ class WorkspaceWidget(BaseWidget):
         self._hide_empty_workspaces = hide_empty_workspaces
         self._hide_private_workspaces = hide_private_workspaces
 
+        self._stack_events = [
+            "CycleStack",
+            "StackWindow",
+            "UnstackWindow",
+            "FocusWindow",
+            "StackAll",
+            "UnstackAll",
+        ]
+
         self._workspace_focus_events = [
             KomorebiEvent.CycleFocusWorkspace.value,
             KomorebiEvent.CycleFocusMonitor.value,
@@ -183,6 +215,17 @@ class WorkspaceWidget(BaseWidget):
         self._workspace_container.setLayout(self._workspace_container_layout)
         self._workspace_container.setProperty("class", "widget-container")
         self._workspace_container.hide()
+        # Construct container which holds active stack buttons
+        self._active_stack_container_layout: QHBoxLayout = QHBoxLayout()
+        self._active_stack_container_layout.setSpacing(0)
+        self._active_stack_container_layout.setContentsMargins(0, 0, 0, 0)
+        self._active_stack_container: QWidget = QWidget()
+        self._active_stack_container.setLayout(self._active_stack_container_layout)
+        self._active_stack_container.setProperty("class", "komorebi-stack-container")
+        self._active_stack_container.hide()
+        self._focused_container = None
+        self._active_stack_buttons: list[StackedWindowButton] = []
+        # Add workspace container to workspace widget layout
         self.widget_layout.addWidget(self._offline_text)
         self.widget_layout.addWidget(self._workspace_container)
         
@@ -243,10 +286,18 @@ class WorkspaceWidget(BaseWidget):
                     prev_workspace_button = self._workspace_buttons[self._prev_workspace_index]
                     self._update_button(prev_workspace_button)
                     new_workspace_button = self._workspace_buttons[self._curr_workspace_index]
-                    self._update_button(new_workspace_button)
+                    if self._focused_container_is_stack():
+                        # print(f"W: {self._get_focused_workspace()["index"]}, C: {self._focused_container["index"]}, S: T -------> Found stack! Adding Buttons!")
+                        self._add_or_update_buttons()
+                    else:
+                        # print(f"W: {self._get_focused_workspace()["index"]}, C: {self._focused_container["index"]}, S: F -------> No stack! Updating Button and hiding stack!")
+                        self._update_button(new_workspace_button)
+                        self._active_stack_container.hide()
                 except (IndexError, TypeError):
                     self._add_or_update_buttons()
             elif event['type'] in self._update_buttons_event_watchlist:
+                self._add_or_update_buttons()
+            elif event['type'] in self._stack_events:
                 self._add_or_update_buttons()
 
             # Remove workspace button if workspace is closed
@@ -276,6 +327,14 @@ class WorkspaceWidget(BaseWidget):
             self._workspace_container_layout.removeWidget(old_workspace_widget)
             old_workspace_widget.setParent(None)
 
+    def _clear_stack_container_layout(self):
+        for i in reversed(range(self._active_stack_container_layout.count())):
+            old_stack_widget = self._active_stack_container_layout.itemAt(i).widget()
+            self._active_stack_container_layout.removeWidget(old_stack_widget)
+            old_stack_widget.setParent(None)
+        self._active_stack_buttons = []
+        self._active_stack_container.hide()
+
     def _update_komorebi_state(self, komorebi_state: dict) -> bool:
         try:
             self._screen_hwnd = get_monitor_hwnd(int(QWidget.winId(self)))
@@ -284,6 +343,8 @@ class WorkspaceWidget(BaseWidget):
                 self._komorebi_screen = self._komorebic.get_screen_by_hwnd(self._komorebi_state, self._screen_hwnd)
                 self._komorebi_workspaces = self._komorebic.get_workspaces(self._komorebi_screen)
                 focused_workspace = self._get_focused_workspace()
+                self._focused_container = self._komorebic.get_focused_container(self._komorebi_screen)
+                # print(f"W: {focused_workspace["index"]}, C: {self._focused_container["index"]}, S: {"T" if self._focused_container_is_stack() else "F"}")
                 if focused_workspace:
                     self._prev_workspace_index = self._curr_workspace_index
                     self._curr_workspace_index = focused_workspace['index']
@@ -323,8 +384,53 @@ class WorkspaceWidget(BaseWidget):
                     workspace_btn.animate_buttons()
             workspace_btn.update_visible_buttons()
 
+    def _focused_container_is_stack(self) -> bool:
+        try:
+            windows = self._focused_container['windows']['elements']
+            # print(f"W: {self._get_focused_workspace()["index"]}, C: {self._focused_container["index"]}, S: {"T" if len(windows) > 1 else "F"}")
+            return len(windows) > 1
+        except (Exception):
+            # print(f"W: {self._get_focused_workspace()["index"]}, C: {self._focused_container["index"]}, S: F")
+            return False
+
+    def _add_or_update_stack_buttons(self) -> bool:
+        # print("Try adding stack buttons............")
+        try:
+            self._clear_stack_container_layout()
+            # print(self._focused_container)
+            windows = self._focused_container['windows']['elements']
+            focused_index = self._focused_container['windows']['focused']
+            if len(windows) > 1:
+                self._active_stack_buttons = []
+                # print(f"Focused Window: {focused_index}")
+                for i, w in enumerate(windows):
+                    sw_btn = StackedWindowButton(i)
+                    if i == focused_index:
+                        # print("setting status to focused")
+                        sw_btn.status = STACK_WINDOW_STATUS_FOCUSED
+                    else:
+                        # print("setting status to unfocused")
+                        sw_btn.status = STACK_WINDOW_STATUS_UNFOCUSED
+                    self._active_stack_buttons.append(sw_btn)
+                    self._active_stack_container_layout.addWidget(sw_btn)
+                    sw_btn.show()
+                    sw_btn.update_and_redraw(sw_btn.status)
+                self._active_stack_container.show()
+                active_ws_button = self._workspace_buttons[self._curr_workspace_index]
+                active_ws_button.hide()
+                # print("Added stack buttons!!!!!!")
+                return True
+            else:
+                self._update_button(self._workspace_buttons[self._curr_workspace_index])
+                # print("Didn't add stack buttons!!!!!!")
+                return False
+        except (Exception):
+            self._update_button(self._workspace_buttons[self._curr_workspace_index])
+            # print("Didn't add stack buttons!!!!!!")
+            return False
+
     def _add_or_update_buttons(self) -> None:
-        buttons_added = False
+        buttons_added = self._focused_container_is_stack()
         for workspace_index, workspace in enumerate(self._komorebi_workspaces):             
             try:
                 button = self._workspace_buttons[workspace_index]
@@ -337,9 +443,24 @@ class WorkspaceWidget(BaseWidget):
             self._workspace_buttons.sort(key=lambda btn: btn.workspace_index)
             self._clear_container_layout()
             for workspace_btn in self._workspace_buttons:
-                self._workspace_container_layout.addWidget(workspace_btn)
-                self._update_button(workspace_btn)
-                
+                if workspace_btn.workspace_index == self._curr_workspace_index:
+                    # print("handling active ws button!!!!!")
+                    self._workspace_container_layout.addWidget(workspace_btn)
+                    self._workspace_container_layout.addWidget(self._active_stack_container)
+                    if not self._add_or_update_stack_buttons():
+                        self._update_button(workspace_btn)
+                        self._active_stack_container.hide()
+                        # Set the cursor to be a pointer when hovering over the button
+                        workspace_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+                else:
+                    self._workspace_container_layout.addWidget(workspace_btn)
+                    self._update_button(workspace_btn)
+                    # Set the cursor to be a pointer when hovering over the button
+                    workspace_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        elif len(self._active_stack_buttons) > 0:
+            self._clear_stack_container_layout()
+            self._update_button(self._workspace_buttons[self._curr_workspace_index])
+
     def _get_workspace_label(self, workspace_index):
         workspace = self._komorebic.get_workspace_by_index(self._komorebi_screen, workspace_index)
         monitor_index = self._komorebi_screen['index']
