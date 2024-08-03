@@ -53,6 +53,19 @@ class KomorebiClient:
         except (KeyError, TypeError):
             return None
 
+    def get_focused_container(self, screen: dict) -> Optional[dict]:
+        try:
+            focused_workspace = self.get_focused_workspace(screen)
+            focused_container_index = focused_workspace.get('containers', {}).get('focused', -1)
+            if focused_container_index >= 0:
+                focused_container = focused_workspace['containers']['elements'][focused_container_index]
+                focused_container['index'] = focused_container_index
+                return focused_container
+            else:
+                return None
+        except (KeyError, TypeError, IndexError):
+            return None
+
     def get_num_windows(self, workspace: dict):
         containers = workspace['containers']['elements']
         if workspace.get('floating_windows', []):
