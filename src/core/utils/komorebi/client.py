@@ -163,3 +163,9 @@ class KomorebiClient:
         _stdout, stderr = proc.communicate()
 
         return stderr, proc
+
+    def focus_stack_window(self, sw_idx: int, wait: bool = False) -> None:
+        p = subprocess.Popen([self._komorebic_path, "focus-stack-window", str(sw_idx)], shell=True)
+
+        if wait:
+            p.wait()

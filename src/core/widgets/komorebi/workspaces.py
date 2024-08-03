@@ -37,13 +37,19 @@ class StackedWindowButton(QPushButton):
         self.status = STACK_WINDOW_STATUS_UNFOCUSED
         self.setProperty("class", "sw-btn")
         self.setText(label if label else str(stack_window_index + 1))
-        # self.clicked.connect(self.focus_stack_window)
+        self.clicked.connect(self.focus_stack_window)
         self.hide()
 
     def update_and_redraw(self, status: StackWindowStatus):
         self.status = status
         self.setProperty("class", f"sw-btn {status.lower()}")
         self.setStyleSheet('')
+
+    def focus_stack_window(self):
+        try:
+            self.komorebic.focus_stack_window(self.stack_window_index)
+        except Exception:
+            logging.exception(f"Failed to focus window at index {self.stack_window_index}")
 
 
 class WorkspaceButton(QPushButton):
@@ -175,6 +181,7 @@ class WorkspaceWidget(BaseWidget):
             "FocusWindow",
             "StackAll",
             "UnstackAll",
+            "FocusStackWindow",
         ]
 
         self._workspace_focus_events = [
@@ -415,6 +422,8 @@ class WorkspaceWidget(BaseWidget):
                     self._active_stack_container_layout.addWidget(sw_btn)
                     sw_btn.show()
                     sw_btn.update_and_redraw(sw_btn.status)
+                    # Set the cursor to be a pointer when hovering over the button
+                    sw_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
                 self._active_stack_container.show()
                 active_ws_button = self._workspace_buttons[self._curr_workspace_index]
                 active_ws_button.hide()
