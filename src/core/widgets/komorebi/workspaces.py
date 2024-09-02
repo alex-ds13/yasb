@@ -175,13 +175,14 @@ class WorkspaceWidget(BaseWidget):
         self._hide_private_workspaces = hide_private_workspaces
 
         self._stack_events = [
-            "CycleStack",
-            "StackWindow",
-            "UnstackWindow",
-            "FocusWindow",
-            "StackAll",
-            "UnstackAll",
-            "FocusStackWindow",
+            KomorebiEvent.CycleStack.value,
+            KomorebiEvent.StackWindow.value,
+            KomorebiEvent.UnstackWindow.value,
+            KomorebiEvent.FocusWindow.value,
+            KomorebiEvent.StackAll.value,
+            KomorebiEvent.UnstackAll.value,
+            KomorebiEvent.FocusStackWindow.value,
+            KomorebiEvent.FocusChange.value,
         ]
 
         self._workspace_focus_events = [
