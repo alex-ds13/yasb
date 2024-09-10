@@ -30,9 +30,11 @@ STACK_WINDOW_STATUS_UNFOCUSED: StackWindowStatus = "UNFOCUSED"
 
 class StackedWindowButton(QPushButton):
 
-    def __init__(self, stack_window_index: int, label: str = None):
+    def __init__(self, stack_window_index: int, monitor_index: int, is_monitor_focused: bool, label: str = None):
         super().__init__()
         self.komorebic = KomorebiClient()
+        self.monitor_index = monitor_index
+        self.is_monitor_focused = is_monitor_focused
         self.stack_window_index = stack_window_index
         self.status = STACK_WINDOW_STATUS_UNFOCUSED
         self.setProperty("class", "sw-btn")
@@ -47,6 +49,8 @@ class StackedWindowButton(QPushButton):
 
     def focus_stack_window(self):
         try:
+            if not self.is_monitor_focused:
+                self.komorebic.focus_monitor(self.monitor_index)
             self.komorebic.focus_stack_window(self.stack_window_index)
         except Exception:
             logging.exception(f"Failed to focus window at index {self.stack_window_index}")
@@ -167,6 +171,7 @@ class WorkspaceWidget(BaseWidget):
         self._padding = container_padding
         self._animation = animation
         self._komorebi_screen = None
+        self._is_screen_focused = False
         self._komorebi_workspaces = []
         self._prev_workspace_index = None
         self._curr_workspace_index = None
@@ -349,6 +354,7 @@ class WorkspaceWidget(BaseWidget):
             self._komorebi_state = komorebi_state
             if self._komorebi_state:
                 self._komorebi_screen = self._komorebic.get_screen_by_hwnd(self._komorebi_state, self._screen_hwnd)
+                self._is_screen_focused = self._komorebi_screen['index'] == self._komorebic.get_focused_monitor(komorebi_state)
                 self._komorebi_workspaces = self._komorebic.get_workspaces(self._komorebi_screen)
                 focused_workspace = self._get_focused_workspace()
                 self._focused_container = self._komorebic.get_focused_container(self._komorebi_screen)
@@ -411,8 +417,9 @@ class WorkspaceWidget(BaseWidget):
             if len(windows) > 1:
                 self._active_stack_buttons = []
                 # print(f"Focused Window: {focused_index}")
+                monitor_index = self._komorebi_screen['index']
                 for i, w in enumerate(windows):
-                    sw_btn = StackedWindowButton(i)
+                    sw_btn = StackedWindowButton(i, monitor_index, self._is_screen_focused)
                     if i == focused_index:
                         # print("setting status to focused")
                         sw_btn.status = STACK_WINDOW_STATUS_FOCUSED

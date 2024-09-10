@@ -35,6 +35,9 @@ class KomorebiClient:
             if screen.get('id', None) == screen_hwnd:
                 return add_index(screen, i)
 
+    def get_focused_monitor(self, state: dict) -> int:
+        return state['monitors']['focused']
+
     def get_workspaces(self, screen: dict) -> list:
         return [add_index(workspace, i) for i, workspace in enumerate(screen['workspaces']['elements'])]
 
@@ -166,6 +169,12 @@ class KomorebiClient:
 
     def focus_stack_window(self, sw_idx: int, wait: bool = False) -> None:
         p = subprocess.Popen([self._komorebic_path, "focus-stack-window", str(sw_idx)], shell=True)
+
+        if wait:
+            p.wait()
+
+    def focus_monitor(self, m_idx: int, wait: bool = False) -> None:
+        p = subprocess.Popen([self._komorebic_path, "focus-monitor", str(m_idx)], shell=True)
 
         if wait:
             p.wait()
