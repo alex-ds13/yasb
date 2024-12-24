@@ -3,6 +3,8 @@ DEFAULTS = {
     'label_workspace_btn': '{index}',
     'label_workspace_active_btn': '{index}',
     'label_workspace_populated_btn': '{index}',
+    'label_stack_btn': '{index}',
+    'label_stack_active_btn': '{index}',
     'label_default_name': '',
     'label_float_override': 'Override Active',
     'hide_if_offline': False,
@@ -29,6 +31,14 @@ VALIDATION_SCHEMA = {
     'label_workspace_populated_btn': {
         'type': 'string',
         'default': DEFAULTS['label_workspace_populated_btn']
+    },
+    'label_stack_btn': {
+        'type': 'string',
+        'default': DEFAULTS['label_stack_btn']
+    },
+    'label_stack_active_btn': {
+        'type': 'string',
+        'default': DEFAULTS['label_stack_active_btn']
     },
     'label_default_name': {
         'type': 'string',

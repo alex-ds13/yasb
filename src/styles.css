@@ -125,6 +125,39 @@ QToolTip {
     margin: 0 4px;
     border-radius: 5px;
 }
+.komorebi-workspaces .komorebi-stack-container {
+    border-radius: 7px;
+    margin: 8px 0px 8px 0px;
+    padding: 0;
+    background-color: rgba(255, 255, 255, 0.25);
+}
+.komorebi-stack-container .sw-btn {
+    color: transparent;
+    width: 10px;
+    height: 10px;
+    background-color: var(--lavender);
+    border-radius: 5px;
+    margin: 0 4px;
+    font-size: 1px;
+}
+.komorebi-stack-container .sw-btn.focused {
+    color: transparent;
+    background-color: var(--blue);
+    width: 10px;
+    height: 10px;
+    margin: 0 4px;
+    border-radius: 5px;
+}
+.komorebi-stack-container .sw-btn:hover {
+    /* background-color: rgba(0, 0, 0, 0.5); */
+    background-color: var(--sapphire);
+    color: rgba(0, 0, 0, 0.0);
+}
+.komorebi-stack-container .sw-btn.focused:hover {
+    /* background-color: rgba(255, 255, 255, 0.5); */
+    background-color: var(--sapphire);
+    color: rgba(255, 255, 255, 0.0);
+}
 .apps-widget {
     padding: 0 4px 0 2px;
 }
