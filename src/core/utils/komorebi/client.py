@@ -103,6 +103,13 @@ class KomorebiClient:
 
         if wait:
             p.wait()
+
+    def activate_monitor_workspace(self, m_idx: int, ws_idx: int, wait: bool = False) -> None:
+        p = subprocess.Popen([self._komorebic_path, "focus-monitor-workspace", str(m_idx), str(ws_idx)], shell=True)
+
+        if wait:
+            p.wait()
+
     def next_workspace(self) -> None:
         try:
             subprocess.Popen([self._komorebic_path, "cycle-workspace", "next"], shell=True)

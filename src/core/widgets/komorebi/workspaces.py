@@ -70,9 +70,10 @@ class StackedWindowButton(QPushButton):
 
 class WorkspaceButton(QPushButton):
 
-    def __init__(self, workspace_index: int, parent_widget: 'WorkspaceWidget', label: str = None, active_label: str = None, populated_label: str = None, animation: bool = False):
+    def __init__(self, monitor_index: int, workspace_index: int, parent_widget: 'WorkspaceWidget', label: str = None, active_label: str = None, populated_label: str = None, animation: bool = False):
         super().__init__()
         self.komorebic = KomorebiClient()
+        self.monitor_index = monitor_index
         self.workspace_index = workspace_index
         self.parent_widget = parent_widget
         self.status = WORKSPACE_STATUS_EMPTY
@@ -110,7 +111,7 @@ class WorkspaceButton(QPushButton):
 
     def activate_workspace(self):
         try:
-            self.komorebic.activate_workspace(self.workspace_index)
+            self.komorebic.activate_monitor_workspace(self.monitor_index, self.workspace_index)
             if self._animation:
                 self.animate_buttons()
         except Exception:
@@ -403,6 +404,8 @@ class WorkspaceWidget(BaseWidget):
         workspace_index = workspace_btn.workspace_index
         workspace = self._komorebic.get_workspace_by_index(self._komorebi_screen, workspace_index)
         workspace_status = self._get_workspace_new_status(workspace)
+        monitor_index = self._komorebi_screen['index']
+        workspace_btn.monitor_index = monitor_index
         if ((self._hide_empty_workspaces and
            workspace_status == WORKSPACE_STATUS_EMPTY) or
            workspace_status == WORKSPACE_STATUS_PRIVATE):
@@ -525,7 +528,8 @@ class WorkspaceWidget(BaseWidget):
         workspace_button_indexes = [ws_btn.workspace_index for ws_btn in self._workspace_buttons]
         if workspace_index not in workspace_button_indexes:
             default_label, active_label, populated_label = self._get_workspace_label(workspace_index)
-            workspace_btn = WorkspaceButton(workspace_index, self, default_label, active_label, populated_label, self._animation)
+            monitor_index = self._komorebi_screen['index']
+            workspace_btn = WorkspaceButton(monitor_index, workspace_index, self, default_label, active_label, populated_label, self._animation)
             self._workspace_buttons.append(workspace_btn)
             return workspace_btn
 
